@@ -1,6 +1,6 @@
 1. How to run this file (for example: run file train.py)
     - Move to the 'src' file
-    - Enter this line in command line or git bash: python3 -m training.train
+    - Enter this line in command line or git bash: python(or python3) -m fist_model.training.train
 
 2. How to install neccessary package in python file
     - Move to the 'src' file
