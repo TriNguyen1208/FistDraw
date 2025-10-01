@@ -1,0 +1,12 @@
+1. How to run this file (for example: run file train.py)
+    - Move to the 'src' file
+    - Enter this line in command line or git bash: python3 -m training.train
+
+2. How to install neccessary package in python file
+    - Move to the 'src' file
+    - Enter this line: pip install -r requirements.txt
+
+3. How to create and run .venv file
+    - Create: python(or python3) -m venv .venv
+    - Enter this line (for window): .venv\Scripts\activate
+    - Enter this line (for linux): source .venv/bin/activate

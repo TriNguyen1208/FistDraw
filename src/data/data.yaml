@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['fist']
+
+roboflow:
+  workspace: first-sixpi
+  project: fist-project
+  version: 3
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/first-sixpi/fist-project/dataset/3
