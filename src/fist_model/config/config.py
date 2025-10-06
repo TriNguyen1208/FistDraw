@@ -1,5 +1,5 @@
-from src.config.constant import TRAIN_IMAGE_FOLDER, TRAIN_LABEL_FOLDER, VALID_IMAGE_FOLDER, VALID_LABEL_FOLDER
-from src.data.preprocessor import Preprocessor
+from src.fist_model.config.constant import TRAIN_IMAGE_FOLDER, TRAIN_LABEL_FOLDER, VALID_IMAGE_FOLDER, VALID_LABEL_FOLDER
+from data.preprocessor import Preprocessor
 import cv2
 import torch
 import os
