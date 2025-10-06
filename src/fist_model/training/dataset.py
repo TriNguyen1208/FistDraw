@@ -31,10 +31,10 @@ class MyDataset(Dataset):
 #Test----------------------------------------------------------------------
 # Tạo DataLoader
 train_dataset = MyDataset(c.TRAIN_IMAGE_FOLDER, c.TRAIN_LABEL_FOLDER)
-train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers = 4)
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers = 4)
 
 valid_dataset = MyDataset(c.VALID_IMAGE_FOLDER, c.VALID_LABEL_FOLDER)
-valid_loader = DataLoader(valid_dataset, batch_size=16, shuffle=True, num_workers = 4)
+valid_loader = DataLoader(valid_dataset, batch_size=32, shuffle=True, num_workers = 4)
 
 # # Dùng
 # for imgs, labels in train_loader:
