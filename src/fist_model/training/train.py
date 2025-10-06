@@ -19,7 +19,7 @@ class DetectionLoss(nn.Module):
 
 
 # ----- Training loop -----
-def train(model, train_loader = dt.train_loader, valid_loader = dt.valid_loader, num_epochs=5, lr=1e-3, device="cuda"):
+def train(model, train_loader = dt.train_loader, valid_loader = dt.valid_loader, num_epochs=5, lr=5e-4, device="cuda"):
     model = model.to(device)
     criterion = DetectionLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
