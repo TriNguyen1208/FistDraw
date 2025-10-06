@@ -27,12 +27,8 @@ def train(model, train_loader = dt.train_loader, valid_loader = dt.valid_loader,
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
-        test_count = 0
 
         for imgs, labels in train_loader:
-            print(test_count/75 * 100)
-            test_count += 1
-            
             imgs, labels = imgs.to(device), labels.to(device)
 
             outputs = model(imgs)              # forward
@@ -56,7 +52,7 @@ def train(model, train_loader = dt.train_loader, valid_loader = dt.valid_loader,
         print(f"Valid [{epoch+1}/{num_epochs}] Loss: {valid_loss/len(valid_loader):.4f}")
     
     #Save model
-    save_path = "src/fist_mode/trained.pth"
+    save_path = "src/fist_model/trained.pth"
     torch.save(model.state_dict(), save_path)
     print("Saved model!")    
 
