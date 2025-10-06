@@ -1,55 +1,53 @@
-import cv2, torch, numpy as np
-import src.fist_model.model.model as md
+import cv2
+import torch
+import numpy as np
+from src.fist_model.model.model import FistDetection
 
+# --- Load model ---
 device = "cuda" if torch.cuda.is_available() else "cpu"
-model = md.FistDetection().to(device)
+model = FistDetection().to(device)
 model.load_state_dict(torch.load("src/fist_model/trained.pth", map_location=device))
 model.eval()
 
-INPUT_SIZE = 224  # chỉnh theo model của bạn nếu khác
-
-def preprocess(frame):
-    img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    img = cv2.resize(img, (INPUT_SIZE, INPUT_SIZE)).astype(np.float32) / 255.0
-    # mean/std nếu có:
-    # mean = np.array([0.485,0.456,0.406]); std = np.array([0.229,0.224,0.225])
-    # img = (img - mean) / std
-    tensor = torch.from_numpy(img).permute(2,0,1).unsqueeze(0).to(device)
-    return tensor
-
+# --- Webcam ---
 cap = cv2.VideoCapture(0)
-if not cap.isOpened():
-    raise SystemExit("Can't open camera")
+INPUT_SIZE = 224
 
 while True:
     ret, frame = cap.read()
     if not ret:
         break
-    H, W = frame.shape[:2]
 
+    # Resize & preprocess
+    img = cv2.resize(frame, (INPUT_SIZE, INPUT_SIZE))
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    input_tensor = torch.from_numpy(img_rgb).permute(2,0,1).float() / 255.0
+    input_tensor = input_tensor.unsqueeze(0).to(device)
+
+    # Forward
     with torch.no_grad():
-        out = model(preprocess(frame)).squeeze(0).cpu().numpy()
-
-    # 🔍 In kết quả raw từ model
-    print(f"Output: {out}")
-
-    # Hoặc in tách từng giá trị
-    p, bx, by, bw, bh = out
-    print(f"p={p:.4f}, bx={bx:.4f}, by={by:.4f}, bw={bw:.4f}, bh={bh:.4f}")
-
-    cv2.putText(frame, f"p={p:.3f} bx={bx:.3f} by={by:.3f} bw={bw:.3f} bh={bh:.3f}",
-                (10,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
-
+        output = model(input_tensor)
+        output = output[0].cpu().numpy()  # (5,)
+    
+    p, x, y, w, h = output
     if p > 0.5:
-        x1 = int((bx - bw/2) * W); y1 = int((by - bh/2) * H)
-        x2 = int((bx + bw/2) * W); y2 = int((by + bh/2) * H)
+        # Chuyển bbox về kích thước frame gốc
+        x_center = int(x * frame.shape[1])
+        y_center = int(y * frame.shape[0])
+        box_w = int(w * frame.shape[1])
+        box_h = int(h * frame.shape[0])
+
+        x1 = int(x_center - box_w / 2)
+        y1 = int(y_center - box_h / 2)
+        x2 = int(x_center + box_w / 2)
+        y2 = int(y_center + box_h / 2)
+
+        # Vẽ bbox
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 2)
+        cv2.putText(frame, f"P: {p:.2f}", (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,0), 2)
 
-        tx1 = int(bx * W); ty1 = int(by * H)
-        tx2 = int((bx + bw) * W); ty2 = int((by + bh) * H)
-        cv2.rectangle(frame, (tx1, ty1), (tx2, ty2), (0,0,255), 2)
-
-    cv2.imshow("Fist detect (green=center, red=tl). Press q to quit", frame)
+    cv2.imshow("Fist Detection", frame)
+    
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 

@@ -15,7 +15,7 @@ class DetectionLoss(nn.Module):
     def forward(self, outputs, targets):
         p_loss = self.cls_loss(outputs[:, 0], targets[:, 0])
         box_loss = self.reg_loss(outputs[:, 1:], targets[:, 1:])
-        return p_loss + box_loss
+        return p_loss + 5.0 * box_loss
 
 
 # ----- Training loop -----
