@@ -24,7 +24,7 @@ class MyDataset(Dataset):
         label_path = os.path.join(self.label_folder, self.filenames[idx].replace(".jpg", ".txt"))
         with open(label_path, "r") as f:
             nums = f.read().split()
-            label = torch.tensor([1.0] + [float(x) for x in nums[:4]]) if nums else torch.zeros(5)
+            label = torch.tensor([1.0] + [float(x) for x in nums[:4]]) if nums else torch.zeros(5, dtype=torch.float32)
 
         return img, label
 
