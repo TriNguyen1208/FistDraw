@@ -39,7 +39,6 @@ def train(model, train_loader = dt.train_loader, valid_loader = dt.valid_loader,
             optimizer.step()                   # update weight
 
             running_loss += loss.item()
-        print(f"Epoch [{epoch+1}/{num_epochs}] Loss: {running_loss/len(train_loader):.4f}")
 
         #calc error on validation dataset
         model.eval() #switch to evaluation mode (no dropout, no dynamic weights)
@@ -49,7 +48,7 @@ def train(model, train_loader = dt.train_loader, valid_loader = dt.valid_loader,
                 imgs, labels = imgs.to(device), labels.to(device)
                 outputs = model(imgs)
                 valid_loss += criterion(outputs, labels).item()
-        print(f"Valid [{epoch+1}/{num_epochs}] Loss: {valid_loss/len(valid_loader):.4f}")
+        print(f"[{epoch+1}/{num_epochs}] Loss: {running_loss/len(train_loader):.4f} - {valid_loss/len(valid_loader):.4f}")
     
     #Save model
     save_path = "src/fist_model/trained.pth"
