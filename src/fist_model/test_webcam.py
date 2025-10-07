@@ -1,54 +1,74 @@
 import cv2
 import torch
+import torch.nn as nn
 import numpy as np
-from src.fist_model.model.model import FistDetection
+from src.fist_model.model.model import FistDetection  # đường dẫn model bạn lưu
 
-# --- Load model ---
+# -------------------------
+# Load model
+# -------------------------
 device = "cuda" if torch.cuda.is_available() else "cpu"
-model = FistDetection().to(device)
+model = FistDetection(input_size=224).to(device)
 model.load_state_dict(torch.load("src/fist_model/trained.pth", map_location=device))
 model.eval()
 
-# --- Webcam ---
+# -------------------------
+# Helper function: preprocess frame
+# -------------------------
+def preprocess(frame, input_size=224):
+    img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    img = cv2.resize(img, (input_size, input_size))
+    img = torch.from_numpy(img).permute(2,0,1).float() / 255.0
+    img = img.unsqueeze(0)  # batch_size=1
+    return img.to(device)
+
+# -------------------------
+# Webcam inference
+# -------------------------
 cap = cv2.VideoCapture(0)
-INPUT_SIZE = 224
 
 while True:
     ret, frame = cap.read()
     if not ret:
         break
 
-    # Resize & preprocess
-    img = cv2.resize(frame, (INPUT_SIZE, INPUT_SIZE))
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    input_tensor = torch.from_numpy(img_rgb).permute(2,0,1).float() / 255.0
-    input_tensor = input_tensor.unsqueeze(0).to(device)
+    h, w, _ = frame.shape
+
+    # Preprocess
+    input_tensor = preprocess(frame, input_size=224)
 
     # Forward
     with torch.no_grad():
         output = model(input_tensor)
-        output = output[0].cpu().numpy()  # (5,)
     
-    p, x, y, w, h = output
+    # Parse output
+    p = torch.sigmoid(output[0,0]).item()  # objectness
+    x = torch.sigmoid(output[0,1]).item()
+    y = torch.sigmoid(output[0,2]).item()
+    bw = output[0,3].item()
+    bh = output[0,4].item()
+
+    # Map bbox to original frame size
+    cx = int(x * w)
+    cy = int(y * h)
+    box_w = int(bw * w)
+    box_h = int(bh * h)
+    x1 = max(cx - box_w//2, 0)
+    y1 = max(cy - box_h//2, 0)
+    x2 = min(cx + box_w//2, w-1)
+    y2 = min(cy + box_h//2, h-1)
+
+    # Draw bbox if p > 0.5
     if p > 0.5:
-        # Chuyển bbox về kích thước frame gốc
-        x_center = int(x * frame.shape[1])
-        y_center = int(y * frame.shape[0])
-        box_w = int(w * frame.shape[1])
-        box_h = int(h * frame.shape[0])
+        cv2.rectangle(frame, (x1,y1), (x2,y2), (0,255,0), 2)
+        cv2.putText(frame, f"{p:.2f}", (x1, y1-5),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,0), 2)
 
-        x1 = int(x_center - box_w / 2)
-        y1 = int(y_center - box_h / 2)
-        x2 = int(x_center + box_w / 2)
-        y2 = int(y_center + box_h / 2)
-
-        # Vẽ bbox
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 2)
-        cv2.putText(frame, f"P: {p:.2f}", (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,0), 2)
-
+    # Show frame
     cv2.imshow("Fist Detection", frame)
-    
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+
+    key = cv2.waitKey(1)
+    if key & 0xFF == ord('q'):
         break
 
 cap.release()
