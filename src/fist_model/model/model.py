@@ -32,7 +32,5 @@ class FistDetection(nn.Module):
         output = self.fc1(output)
         output = self.fc2(output)
         output = self.fc3(output)
-
-        output[:, 0] = torch.sigmoid(output[:, 0]) #sigmoid for p
-        # output = torch.sigmoid(output)
+        
         return output

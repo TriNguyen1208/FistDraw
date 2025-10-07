@@ -16,7 +16,7 @@ except FileNotFoundError:
 
 # --- 2. Định nghĩa hằng số ---
 INPUT_SIZE = 224
-IMAGE_PATH = "src/fist_model/data/train/images_224/image_500.jpg" # THAY ĐỔI ĐƯỜNG DẪN NÀY ĐẾN FILE ẢNH CỦA BẠN
+IMAGE_PATH = "src/fist_model/data/train/images_224/image_284.jpg" # THAY ĐỔI ĐƯỜNG DẪN NÀY ĐẾN FILE ẢNH CỦA BẠN
 
 # --- 3. Đọc Ảnh ---
 frame = cv2.imread(IMAGE_PATH)
