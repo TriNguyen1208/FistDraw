@@ -42,7 +42,10 @@ while True:
         output = model(input_tensor)
     
     # Parse output
-    p = torch.sigmoid(output[0,0]).item()  # objectness
+    # p = output[0, 0].item()
+    # x = output[0, 1].item()
+    # y = output[0, 2].item()
+    p = torch.sigmoid(output[0,0]).item()
     x = torch.sigmoid(output[0,1]).item()
     y = torch.sigmoid(output[0,2]).item()
     bw = output[0,3].item()
@@ -61,8 +64,8 @@ while True:
     # Draw bbox if p > 0.5
     if p > 0.5:
         cv2.rectangle(frame, (x1,y1), (x2,y2), (0,255,0), 2)
-        cv2.putText(frame, f"{p:.2f}", (x1, y1-5),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,0), 2)
+    cv2.putText(frame, f"p:{p:.2f} x:{x:.2f} y:{y:.2f} w:{bw:.2f} h:{bh:.2f}",
+                (10,30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)   
 
     # Show frame
     cv2.imshow("Fist Detection", frame)
