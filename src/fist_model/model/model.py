@@ -42,11 +42,11 @@ class FistDetection(nn.Module):
         self.conv2 = nn.Sequential(nn.Conv2d(16, 32, 3), nn.ReLU(inplace=True), nn.MaxPool2d(2,2))
         self.conv3 = nn.Sequential(nn.Conv2d(32, 64, 3), nn.ReLU(inplace=True), nn.MaxPool2d(2,2))
         self.conv4 = nn.Sequential(nn.Conv2d(64, 128, 3), nn.ReLU(inplace=True))
-        
+
         self.adaptive_pool = nn.AdaptiveAvgPool2d((4,4))
         dimension = 128*4*4
-        self.fc1 = nn.Sequential(nn.Linear(dimension, 128), nn.ReLU(inplace=True), nn.Dropout(0.5))
-        self.fc2 = nn.Sequential(nn.Linear(128, 64), nn.ReLU(inplace=True), nn.Dropout(0.5))
+        self.fc1 = nn.Sequential(nn.Linear(dimension, 128), nn.ReLU(inplace=True), nn.Dropout(0.3))
+        self.fc2 = nn.Sequential(nn.Linear(128, 64), nn.ReLU(inplace=True), nn.Dropout(0.3))
         self.fc3 = nn.Sequential(nn.Linear(64, 5))        
 
     def forward(self, input: torch.tensor):
