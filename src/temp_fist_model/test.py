@@ -9,12 +9,11 @@ cap = cv2.VideoCapture(0)
 
 while True:
     ret, frame = cap.read()
-    frame = cv2.flip(frame, 1)  # 1 = lật ngang (mirror)
+    frame = cv2.flip(frame, 1)  # 1 = lật ngang lại
 
     if not ret:
         break
 
-    # Chạy YOLO detect realtime
     results = model(frame, stream=True, imgsz=224) #take out the (x,y) here later
 
     # Hiển thị kết quả
@@ -29,7 +28,6 @@ while True:
         annotated = r.plot()  # Vẽ bbox và label lên ảnh
         cv2.imshow("YOLO Detection", annotated)
 
-    # Nhấn 'q' để thoát
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 

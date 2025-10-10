@@ -18,33 +18,60 @@ import src.fist_model.model.model as md
 #         wh_loss = self.reg_loss(outputs[:, 3:5], targets[:, 3:5])
 #         return p_loss + 5.0 * (xy_loss + wh_loss)
 
+# class DetectionLoss(nn.Module):
+#     def __init__(self, lambda_bbox=5.0):
+#         super().__init__()
+#         self.cls_loss = nn.BCEWithLogitsLoss()   # p: objectness
+#         self.reg_loss = nn.SmoothL1Loss()        # bbox regression
+#         self.lambda_bbox = lambda_bbox
+
+#     def forward(self, outputs, targets):
+#         """
+#         outputs: (batch, 5) -> (p, x, y, w, h)
+#         targets: (batch, 5) -> (p, x, y, w, h), x,y,w,h normalized [0,1]
+#         """
+#         # Objectness loss
+#         p_loss = self.cls_loss(outputs[:, 0], targets[:, 0])
+
+#         # Bbox center loss (linear, no sigmoid)
+#         xy_loss = self.reg_loss(outputs[:, 1:3], targets[:, 1:3])
+
+#         # Bbox size loss (use sqrt to reduce bias for large boxes)
+#         w_pred_sqrt = torch.sqrt(outputs[:, 3].clamp(min=1e-6))
+#         h_pred_sqrt = torch.sqrt(outputs[:, 4].clamp(min=1e-6))
+#         w_target_sqrt = torch.sqrt(targets[:, 3])
+#         h_target_sqrt = torch.sqrt(targets[:, 4])
+#         wh_loss = self.reg_loss(w_pred_sqrt, w_target_sqrt) + self.reg_loss(h_pred_sqrt, h_target_sqrt)
+
+#         # Total loss
+#         total_loss = p_loss + self.lambda_bbox * (xy_loss + wh_loss)
+#         return total_loss
+
 class DetectionLoss(nn.Module):
     def __init__(self, lambda_bbox=5.0):
         super().__init__()
-        self.cls_loss = nn.BCEWithLogitsLoss()   # p: objectness
-        self.reg_loss = nn.SmoothL1Loss()        # bbox regression
+        self.bce = nn.BCELoss()       # objectness loss
+        self.l1 = nn.SmoothL1Loss()   # bbox regression loss
         self.lambda_bbox = lambda_bbox
 
     def forward(self, outputs, targets):
         """
-        outputs: (batch, 5) -> (p, x, y, w, h)
-        targets: (batch, 5) -> (p, x, y, w, h), x,y,w,h normalized [0,1]
+        outputs: (B, 5) -> (p, x, y, w, h)
+        targets: (B, 5) -> (p, x, y, w, h), normalized [0,1]
         """
-        # Objectness loss
-        p_loss = self.cls_loss(outputs[:, 0], targets[:, 0])
 
-        # Bbox center loss (linear, no sigmoid)
-        xy_loss = self.reg_loss(outputs[:, 1:3], targets[:, 1:3])
+        # --- Objectness ---
+        p_pred = torch.sigmoid(outputs[:, 0])
+        p_true = targets[:, 0]
+        loss_obj = self.bce(p_pred, p_true)
 
-        # Bbox size loss (use sqrt to reduce bias for large boxes)
-        w_pred_sqrt = torch.sqrt(outputs[:, 3].clamp(min=1e-6))
-        h_pred_sqrt = torch.sqrt(outputs[:, 4].clamp(min=1e-6))
-        w_target_sqrt = torch.sqrt(targets[:, 3])
-        h_target_sqrt = torch.sqrt(targets[:, 4])
-        wh_loss = self.reg_loss(w_pred_sqrt, w_target_sqrt) + self.reg_loss(h_pred_sqrt, h_target_sqrt)
+        # --- Bounding box (normalized prediction) ---
+        bbox_pred = torch.sigmoid(outputs[:, 1:5])  # để giới hạn trong [0,1]
+        bbox_true = targets[:, 1:5]
+        loss_bbox = self.l1(bbox_pred, bbox_true)
 
-        # Total loss
-        total_loss = p_loss + self.lambda_bbox * (xy_loss + wh_loss)
+        # --- Total loss ---
+        total_loss = loss_obj + self.lambda_bbox * loss_bbox
         return total_loss
 
 # ----- Training loop -----
