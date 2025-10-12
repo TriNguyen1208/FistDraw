@@ -72,7 +72,7 @@ def train(model, train_loader = dt.train_loader2, valid_loader = dt.valid_loader
             for imgs, labels in valid_loader:
                 imgs, labels = imgs.to(device), labels.to(device)
                 outputs = model(imgs)
-                valid_loss += criterion(outputs, labels).item()
+                valid_loss += criterion(outputs, labels)[0].item()
         print(f"[{epoch+1}/{num_epochs}] Loss: {p_loss/len(train_loader):.4f}, {iou_loss/len(train_loader):.4f}, {running_loss/len(train_loader):.4f} - {valid_loss/len(valid_loader):.4f}")
     
     #Save model
