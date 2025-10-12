@@ -33,7 +33,9 @@ class DetectionLoss(nn.Module):
 
     def forward(self, outputs, targets):
         p_loss = self.cls_loss(outputs[:, 0], targets[:, 0])
-        iou_loss = 1 - iou(outputs[:, 1:5], targets[:, 1:5]).mean()
+        box_pred = torch.clamp(outputs[:, 1:5], 0, 1)
+        box_target = targets[:, 1:5]
+        iou_loss = 1 - iou(box_pred, box_target).mean()
         return p_loss + self.lambda_iou * iou_loss
 
 # ----- Training loop -----
