@@ -26,17 +26,18 @@ def iou(box1, box2):
     return inter/union
 
 class DetectionLoss(nn.Module):
-    def __init__(self, lambda_iou = 5.0):
+    def __init__(self, lambda_iou=4.0):
         super().__init__()
         self.cls_loss = nn.BCEWithLogitsLoss()       # cho p
         self.lambda_iou = lambda_iou
 
     def forward(self, outputs, targets):
         p_loss = self.cls_loss(outputs[:, 0], targets[:, 0])
-        box_pred = torch.clamp(outputs[:, 1:5], 0, 1)
-        box_target = targets[:, 1:5]
-        iou_loss = 1 - iou(box_pred, box_target).mean()
-        return p_loss + self.lambda_iou * iou_loss
+        iou_loss = 1 - iou(outputs[:, 1:5], targets[:, 1:5]).mean()
+        total_loss = p_loss + self.lambda_iou * iou_loss
+
+        # print(p_loss.tolist(), " - ", iou_loss.tolist(), " | ", total_loss.tolist()) 
+        return total_loss, p_loss, iou_loss
 
 # ----- Training loop -----
 def train(model, train_loader = dt.train_loader2, valid_loader = dt.valid_loader2, num_epochs=25, lr=1e-4, device="cuda"):
@@ -47,18 +48,22 @@ def train(model, train_loader = dt.train_loader2, valid_loader = dt.valid_loader
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
+        p_loss = 0.0
+        iou_loss = 0.0
 
         for imgs, labels in train_loader:
             imgs, labels = imgs.to(device), labels.to(device)
 
             outputs = model(imgs)              # forward
-            loss = criterion(outputs, labels)  # tính loss
+            loss, p, iou = criterion(outputs, labels)  # tính loss
 
             optimizer.zero_grad()
             loss.backward()                    # backward
             optimizer.step()                   # update weight
 
             running_loss += loss.item()
+            p_loss += p.item()
+            iou_loss += iou.item()
 
         #calc error on validation dataset
         model.eval() #switch to evaluation mode (no dropout, no dynamic weights)
@@ -68,11 +73,11 @@ def train(model, train_loader = dt.train_loader2, valid_loader = dt.valid_loader
                 imgs, labels = imgs.to(device), labels.to(device)
                 outputs = model(imgs)
                 valid_loss += criterion(outputs, labels).item()
-        print(f"[{epoch+1}/{num_epochs}] Loss: {running_loss/len(train_loader):.4f} - {valid_loss/len(valid_loader):.4f}")
+        print(f"[{epoch+1}/{num_epochs}] Loss: {p_loss/len(train_loader):.4f}, {iou_loss/len(train_loader):.4f}, {running_loss/len(train_loader):.4f} - {valid_loss/len(valid_loader):.4f}")
     
     #Save model
     save_path = "src/fist_model/trained.pth"
-    torch.save(model.state_dict(), save_path)
+    # torch.save(model.state_dict(), save_path)
     print("Saved model!")    
 
 if __name__ == "__main__":
@@ -83,5 +88,5 @@ if __name__ == "__main__":
     except FileNotFoundError:
         print("No saved model found, training from scratch!")
 
-    train(model)
+    train(model, num_epochs=1)
 # print(torch.cuda.is_available()) 

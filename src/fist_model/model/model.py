@@ -37,74 +37,83 @@ from math import pow
     
 #==================================================================================
 
-class FistDetection(nn.Module):
-    def __init__(self, input_size = 224):
-        super(FistDetection, self).__init__()
-        self.conv1 = nn.Sequential(nn.Conv2d(3, 16, 5), nn.ReLU(inplace=True), nn.MaxPool2d(2,2))
-        self.conv2 = nn.Sequential(nn.Conv2d(16, 32, 3), nn.ReLU(inplace=True), nn.MaxPool2d(2,2))
-        self.conv3 = nn.Sequential(nn.Conv2d(32, 64, 3), nn.ReLU(inplace=True), nn.MaxPool2d(2,2))
-        self.conv4 = nn.Sequential(nn.Conv2d(64, 128, 3), nn.ReLU(inplace=True))
+# class FistDetection(nn.Module):
+#     def __init__(self, input_size = 224):
+#         super(FistDetection, self).__init__()
+#         self.conv1 = nn.Sequential(nn.Conv2d(3, 16, 5), nn.ReLU(inplace=True), nn.MaxPool2d(2,2))
+#         self.conv2 = nn.Sequential(nn.Conv2d(16, 32, 3), nn.ReLU(inplace=True), nn.MaxPool2d(2,2))
+#         self.conv3 = nn.Sequential(nn.Conv2d(32, 64, 3), nn.ReLU(inplace=True), nn.MaxPool2d(2,2))
+#         self.conv4 = nn.Sequential(nn.Conv2d(64, 128, 3), nn.ReLU(inplace=True))
 
-        self.adaptive_pool = nn.AdaptiveAvgPool2d((4,4))
-        dimension = 128*4*4
-        # self.fc1 = nn.Sequential(nn.Linear(dimension, 128), nn.ReLU(inplace=True), nn.Dropout(0.3))
-        # self.fc2 = nn.Sequential(nn.Linear(128, 64), nn.ReLU(inplace=True), nn.Dropout(0.3))
-        # self.fc3 = nn.Sequential(nn.Linear(64, 5)) 
+#         self.adaptive_pool = nn.AdaptiveAvgPool2d((4,4))
+#         dimension = 128*4*4
+#         # self.fc1 = nn.Sequential(nn.Linear(dimension, 128), nn.ReLU(inplace=True), nn.Dropout(0.3))
+#         # self.fc2 = nn.Sequential(nn.Linear(128, 64), nn.ReLU(inplace=True), nn.Dropout(0.3))
+#         # self.fc3 = nn.Sequential(nn.Linear(64, 5)) 
 
-        self.p_head = nn.Sequential(
-            nn.Linear(dimension, 64), nn.ReLU(inplace=True), nn.Dropout(0.3),
-            nn.Linear(64, 16), nn.ReLU(inplace=True), nn.Dropout(0.3),  
-            nn.Linear(16, 1)
-        )       
+#         self.p_head = nn.Sequential(
+#             nn.Linear(dimension, 64), nn.ReLU(inplace=True), nn.Dropout(0.3),
+#             nn.Linear(64, 16), nn.ReLU(inplace=True), nn.Dropout(0.3),  
+#             nn.Linear(16, 1)
+#         )       
 
-        self.box_head = nn.Sequential(
-            nn.Linear(dimension, 64), nn.ReLU(inplace=True), nn.Dropout(0.3),
-            nn.Linear(64, 32), nn.ReLU(inplace=True), nn.Dropout(0.3),  
-            nn.Linear(32, 4)
-        )   
+#         self.box_head = nn.Sequential(
+#             nn.Linear(dimension, 64), nn.ReLU(inplace=True), nn.Dropout(0.3),
+#             nn.Linear(64, 32), nn.ReLU(inplace=True), nn.Dropout(0.3),  
+#             nn.Linear(32, 4)
+#         )   
 
-    def forward(self, input: torch.tensor):
-        '''
-            input: torch.tensor (shape: (batch_size, channels, h, w)) 
-            output: torch.tensor (shape: (batch_size, 5)) #(p, x, y, w, h)
-        '''
-        output = self.conv1(input)
-        output = self.conv2(output)
-        output = self.conv3(output)
-        output = self.conv4(output)
-        output = self.adaptive_pool(output)
-        output = output.view(output.size(0), -1)
+#     def forward(self, input: torch.tensor):
+#         '''
+#             input: torch.tensor (shape: (batch_size, channels, h, w)) 
+#             output: torch.tensor (shape: (batch_size, 5)) #(p, x, y, w, h)
+#         '''
+#         output = self.conv1(input)
+#         output = self.conv2(output)
+#         output = self.conv3(output)
+#         output = self.conv4(output)
+#         output = self.adaptive_pool(output)
+#         output = output.view(output.size(0), -1)
 
-        p = self.p_head(output)
-        box = self.box_head(output)
-        output = torch.cat((p, box), dim=1)
+#         p = self.p_head(output)
+#         box = self.box_head(output)
+#         output = torch.cat((p, box), dim=1)
         
-        return output
+#         return output
 
 #==========================================================================
 
-# class FistDetection(nn.Module):
-#     def __init__(self, input_size=224):
-#         super().__init__()
-#         self.backbone = nn.Sequential(
-#             nn.Conv2d(3, 16, 5, stride=2, padding=2), nn.ReLU(),
-#             nn.Conv2d(16, 32, 3, stride=2, padding=1), nn.ReLU(),
-#             nn.Conv2d(32, 64, 3, stride=2, padding=1), nn.ReLU(),
-#             nn.Conv2d(64, 128, 3, stride=2, padding=1), nn.ReLU(),
-#         )
+class FistDetection(nn.Module):
+    def __init__(self, input_size=224):
+        super().__init__()
 
-#         # 2 nhánh tách biệt: 1 cho objectness, 1 cho bbox
-#         self.head_conf = nn.Sequential(
-#             nn.Conv2d(128, 1, 1),
-#             nn.Sigmoid()
-#         )
-#         self.head_bbox = nn.Conv2d(128, 4, 1)  # x, y, w, h (dạng heatmap)
+        self.shared = nn.Sequential(
+            nn.Conv2d(3, 32, 3, padding=1), nn.ReLU(),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(32, 64, 3, padding=1), nn.ReLU(),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(64, 128, 3, padding=1), nn.ReLU(),
+        )
 
-#         self.pool = nn.AdaptiveAvgPool2d(1)  # gom spatial lại sau khi tính xong
+        # Head dự đoán objectness — có thể flatten vì chỉ cần biết có/không
+        self.obj_head = nn.Sequential(
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+            nn.Linear(128, 1)
+        )
 
-#     def forward(self, x):
-#         f = self.backbone(x)
-#         conf = self.pool(self.head_conf(f)).squeeze(-1).squeeze(-1)
-#         bbox = self.pool(self.head_bbox(f)).squeeze(-1).squeeze(-1)
-#         out = torch.cat([conf, bbox], dim=1)  # (B,5)
-#         return out
+        # Head dự đoán bbox — giữ spatial bằng conv
+        self.box_head = nn.Sequential(
+            nn.Conv2d(128, 64, 3, padding=1), nn.ReLU(),
+            nn.Conv2d(64, 32, 3, padding=1), nn.ReLU(),
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+            nn.Linear(32, 4),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        feat = self.shared(x)
+        p = self.obj_head(feat)
+        box = self.box_head(feat)
+        return torch.cat([p, box], dim=1)
