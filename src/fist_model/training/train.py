@@ -88,5 +88,5 @@ if __name__ == "__main__":
     except FileNotFoundError:
         print("No saved model found, training from scratch!")
 
-    train(model, num_epochs=1)
+    train(model, num_epochs=15)
 # print(torch.cuda.is_available()) 
