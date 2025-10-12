@@ -47,9 +47,21 @@ class FistDetection(nn.Module):
 
         self.adaptive_pool = nn.AdaptiveAvgPool2d((4,4))
         dimension = 128*4*4
-        self.fc1 = nn.Sequential(nn.Linear(dimension, 128), nn.ReLU(inplace=True), nn.Dropout(0.3))
-        self.fc2 = nn.Sequential(nn.Linear(128, 64), nn.ReLU(inplace=True), nn.Dropout(0.3))
-        self.fc3 = nn.Sequential(nn.Linear(64, 5))        
+        # self.fc1 = nn.Sequential(nn.Linear(dimension, 128), nn.ReLU(inplace=True), nn.Dropout(0.3))
+        # self.fc2 = nn.Sequential(nn.Linear(128, 64), nn.ReLU(inplace=True), nn.Dropout(0.3))
+        # self.fc3 = nn.Sequential(nn.Linear(64, 5)) 
+
+        self.p_head = nn.Sequential(
+            nn.Linear(dimension, 64), nn.ReLU(inplace=True), nn.Dropout(0.3),
+            nn.Linear(64, 16), nn.ReLU(inplace=True), nn.Dropout(0.3),  
+            nn.Linear(16, 1)
+        )       
+
+        self.box_head = nn.Sequential(
+            nn.Linear(dimension, 64), nn.ReLU(inplace=True), nn.Dropout(0.3),
+            nn.Linear(64, 32), nn.ReLU(inplace=True), nn.Dropout(0.3),  
+            nn.Linear(32, 4)
+        )   
 
     def forward(self, input: torch.tensor):
         '''
@@ -62,9 +74,10 @@ class FistDetection(nn.Module):
         output = self.conv4(output)
         output = self.adaptive_pool(output)
         output = output.view(output.size(0), -1)
-        output = self.fc1(output)
-        output = self.fc2(output)
-        output = self.fc3(output)
+
+        p = self.p_head(output)
+        box = self.box_head(output)
+        output = torch.cat((p, box), dim=1)
         
         return output
 
