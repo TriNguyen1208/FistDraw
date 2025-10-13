@@ -76,4 +76,4 @@ if __name__ == "__main__":
         print(f"[{epoch+1}/{epochs}] Loss: {total_loss/len(train_loader):.4f} - {valid_loss/len(valid_loader):.4f}")
 
     # Save model
-    torch.save(model.state_dict(), "tinyyolo_from_scratch.pth")
+    torch.save(model.state_dict(), "src/build_yolo/tinyyolo_from_scratch.pth")
