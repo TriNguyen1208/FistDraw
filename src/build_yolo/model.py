@@ -40,6 +40,11 @@ valid_loader = dt.valid_loader2
 
 # Model
 model = TinyYOLO().to(device)
+try:
+    model.load_state_dict(torch.load("src/build_yolo/tinyyolo_from_scratch.pth"))
+    print("Loaded model")
+except FileNotFoundError:
+    print("No saved model found, training from scratch!")
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
 # Training loop
@@ -48,7 +53,6 @@ if __name__ == "__main__":
     for epoch in range(epochs):
         model.train()
         total_loss = 0
-        valid_loss = 0
         for imgs, targets in train_loader:
             imgs = imgs.to(device)
             targets = targets.to(device)
