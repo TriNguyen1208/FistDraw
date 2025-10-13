@@ -115,7 +115,7 @@ if __name__ == "__main__":
         print("No saved model found, training from scratch!")
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
-    epochs = 25
+    epochs = 15
     for epoch in range(epochs):
         model.train()
         total_loss = 0
