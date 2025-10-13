@@ -47,11 +47,14 @@ class YOLOv1Tiny(nn.Module):
         x = self.features(x)
         x = self.pred(x)
         x = x.view(-1, self.S, self.S, 5)
-        x = x.clone()
-        x[..., 0] = torch.sigmoid(x[..., 0])  # p trong [0,1]
-        x[..., 1:3] = torch.sigmoid(x[..., 1:3])  # x,y trong [0,1]
-        x[..., 3:5] = torch.clamp(x[..., 3:5], 0, 1)  # w,h trong [0,1]
-        return x
+
+        # tạo các phần tử mới (không ghi đè)
+        p  = torch.sigmoid(x[..., 0:1])      # shape [...,1]
+        xy = torch.sigmoid(x[..., 1:3])      # shape [...,2]
+        wh = torch.clamp(x[..., 3:5], 0, 1)  # shape [...,2]
+
+        out = torch.cat([p, xy, wh], dim=-1) # shape [...,5]
+        return out
 
 # Loss function
 class YOLOv1Loss(nn.Module):
