@@ -33,10 +33,19 @@ class DetectionLoss(nn.Module):
 
     def forward(self, outputs, targets):
         p_loss = self.cls_loss(outputs[:, 0], targets[:, 0])
-        iou_loss = 1 - iou(outputs[:, 1:5], targets[:, 1:5]).mean()
+
+        p_true = targets[:, 0]
+        box_pred = outputs[:, 1:5]
+        box_true = targets[:, 1:5]
+        has_obj = p_true > 0.5
+        if has_obj.any():
+            iou_loss = 1 - iou(box_pred[has_obj], box_true[has_obj]).mean()
+        else:
+            iou_loss = torch.tensor(0.0, device=outputs.device)
+
         total_loss = p_loss + self.lambda_iou * iou_loss
 
-        # print(p_loss.tolist(), " - ", iou_loss.tolist(), " | ", total_loss.tolist()) 
+        print(p_loss.tolist(), " - ", iou_loss.tolist(), " | ", total_loss.tolist()) 
         return total_loss, p_loss, iou_loss
 
 # ----- Training loop -----
@@ -81,12 +90,13 @@ def train(model, train_loader = dt.train_loader2, valid_loader = dt.valid_loader
     print("Saved model!")    
 
 if __name__ == "__main__":
-    model = md.FistDetection()
+    # model = md.FistDetection()
+    model = md.ResNetFistDetector()
     try:
         model.load_state_dict(torch.load("src/fist_model/trained.pth"))
         print("Loaded model")
     except FileNotFoundError:
         print("No saved model found, training from scratch!")
 
-    train(model, num_epochs=15)
+    train(model, num_epochs=1)
 # print(torch.cuda.is_available()) 

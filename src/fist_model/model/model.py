@@ -99,7 +99,8 @@ class FistDetection(nn.Module):
         self.obj_head = nn.Sequential(
             nn.AdaptiveAvgPool2d((1, 1)),
             nn.Flatten(),
-            nn.Linear(128, 1)
+            nn.Linear(128, 64), nn.ReLU(inplace=True),
+            nn.Linear(64, 1)
         )
 
         # Head dự đoán bbox — giữ spatial bằng conv
@@ -108,7 +109,8 @@ class FistDetection(nn.Module):
             nn.Conv2d(64, 32, 3, padding=1), nn.ReLU(),
             nn.AdaptiveAvgPool2d((1, 1)),
             nn.Flatten(),
-            nn.Linear(32, 4),
+            nn.Linear(32, 16), nn.ReLU(inplace=True),
+            nn.Linear(16, 4),
             nn.Sigmoid()
         )
 
@@ -116,4 +118,41 @@ class FistDetection(nn.Module):
         feat = self.shared(x)
         p = self.obj_head(feat)
         box = self.box_head(feat)
+        return torch.cat([p, box], dim=1)
+
+#------------------------------------------------------------------------------------------
+import torchvision.models as models
+class ResNetFistDetector(nn.Module):
+    def __init__(self, pretrained=True):
+        super().__init__()
+
+        # 1️⃣ Backbone - ResNet34 pretrained trên ImageNet
+        base = models.resnet34(weights="IMAGENET1K_V1" if pretrained else None)
+        self.backbone = nn.Sequential(*list(base.children())[:-2])  
+        # giữ lại tất cả trừ lớp FC và AvgPool cuối
+
+        # 2️⃣ Global pooling để nén spatial info
+        self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
+
+        # 3️⃣ Head 1 — phân loại object (có/không)
+        self.obj_head = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(512, 128), nn.ReLU(inplace=True),
+            nn.Linear(128, 1)  # không sigmoid — dùng BCEWithLogitsLoss
+        )
+
+        # 4️⃣ Head 2 — dự đoán bounding box
+        self.box_head = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(512, 256), nn.ReLU(inplace=True),
+            nn.Linear(256, 128), nn.ReLU(inplace=True),
+            nn.Linear(128, 4), nn.Sigmoid()  # (x, y, w, h) normalized [0,1]
+        )
+
+    def forward(self, x):
+        feat = self.backbone(x)
+        pooled = self.global_pool(feat)
+
+        p = self.obj_head(pooled)
+        box = self.box_head(pooled)
         return torch.cat([p, box], dim=1)

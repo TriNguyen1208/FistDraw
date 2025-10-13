@@ -2,7 +2,8 @@ from ultralytics import YOLO
 import cv2
 
 # Nạp model YOLO đã train
-model = YOLO("src/temp_fist_model/best.pt")
+# model = YOLO("src/temp_fist_model/best.pt")
+model = YOLO("src/temp_fist_model/best_scratch.pt")
 
 # Mở webcam (0 là webcam mặc định)
 cap = cv2.VideoCapture(0)
