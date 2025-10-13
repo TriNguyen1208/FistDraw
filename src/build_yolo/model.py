@@ -38,9 +38,9 @@ class YOLOv1Tiny(nn.Module):
         # --- Prediction head ---
         self.pred = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(512 * self.S * self.S, 1024),
+            nn.Linear(1024 * self.S * self.S, 4096),
             nn.LeakyReLU(0.1),
-            nn.Linear(1024, self.S * self.S * 5),  # (p, x, y, w, h)
+            nn.Linear(4096, self.S * self.S * 5),  # (p, x, y, w, h)
         )
 
     def forward(self, x):
