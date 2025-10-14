@@ -106,7 +106,7 @@ class DetectionLoss(nn.Module):
         box_loss = x_loss + y_loss + w_loss + h_loss
         total_loss = p_loss + self.lambda_box * box_loss
 
-        print(p_loss.tolist(), " - ", box_loss.tolist(), " | ", total_loss.tolist()) 
+        # print(p_loss.tolist(), " - ", box_loss.tolist(), " | ", total_loss.tolist()) 
         return total_loss
 
 #training
