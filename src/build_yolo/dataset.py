@@ -34,7 +34,7 @@ class FistDataset(Dataset):
         # read label
         if os.path.exists(label_path) and os.path.getsize(label_path) > 0:
             nums = [float(x) for x in open(label_path).read().split()]
-            target = torch.tensor([1.0]+nums[:4], dtype=torch.float32)  # p=1
+            target = torch.tensor([0.9]+nums[:4], dtype=torch.float32)  # p=1
         else:
             target = torch.zeros(5, dtype=torch.float32)
 

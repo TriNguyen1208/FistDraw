@@ -1,65 +1,78 @@
 import cv2
 import torch
 import torch.nn as nn
-from src.build_yolo.model import YOLOv1Tiny
+import numpy as np
+from src.build_yolo.model import ResNetFistDetector  # đường dẫn model bạn lưu
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-
+# -------------------------
 # Load model
-model = YOLOv1Tiny().to(device)
+# -------------------------
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model = ResNetFistDetector().to(device)
 model.load_state_dict(torch.load("src/build_yolo/tinyyolo_from_scratch.pth", map_location=device))
 model.eval()
 
-# Webcam
+# -------------------------
+# Helper function: preprocess frame
+# -------------------------
+def preprocess(frame, input_size=224):
+    img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    img = cv2.resize(img, (input_size, input_size))
+    img = torch.from_numpy(img).permute(2,0,1).float() / 255.0
+    img = img.unsqueeze(0)  # batch_size=1
+    return img.to(device)
+
+# -------------------------
+# Webcam inference
+# -------------------------
 cap = cv2.VideoCapture(0)
-img_size = 224
 
-import torchvision.transforms as T
-transform = T.Compose([
-    T.ToPILImage(),
-    T.Resize((img_size,img_size)),
-    T.ToTensor(),
-])
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
 
-with torch.no_grad():
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        
-        img = transform(frame).unsqueeze(0).to(device)  # [1,3,H,W]
-        output = model(img)[0]  # [S, S, 5]
+    h, w, _ = frame.shape
 
-        # --- Lấy cell có confidence cao nhất ---
-        confs = output[...,0]
-        cell_idx = torch.argmax(confs)
-        cy, cx = divmod(cell_idx.item(), output.shape[1])
-        p, x_cell, y_cell, w, h = output[cy, cx].tolist()
+    # Preprocess
+    input_tensor = preprocess(frame, input_size=224)
 
-        # Chuyển về tọa độ ảnh gốc
-        S = output.shape[0]
-        h_frame, w_frame = frame.shape[:2]
-        cx_img = int((cx + x_cell) / S * w_frame)
-        cy_img = int((cy + y_cell) / S * h_frame)
-        bw = int(w * w_frame)
-        bh = int(h * h_frame)
+    # Forward
+    with torch.no_grad():
+        output = model(input_tensor)
+    
+    # Parse output
+    # p = output[0, 0].item()
+    # x = output[0, 1].item()
+    # y = output[0, 2].item()
+    p = torch.sigmoid(output[0,0]).item()
+    x = torch.sigmoid(output[0,1]).item()
+    y = torch.sigmoid(output[0,2]).item()
+    bw = output[0,3].item()
+    bh = output[0,4].item()
 
-        x1 = int(cx_img - bw/2)
-        y1 = int(cy_img - bh/2)
-        x2 = int(cx_img + bw/2)
-        y2 = int(cy_img + bh/2)
+    # Map bbox to original frame size
+    cx = int(x * w)
+    cy = int(y * h)
+    box_w = int(bw * w)
+    box_h = int(bh * h)
+    x1 = max(cx - box_w//2, 0)
+    y1 = max(cy - box_h//2, 0)
+    x2 = min(cx + box_w//2, w-1)
+    y2 = min(cy + box_h//2, h-1)
 
-        # Vẽ bbox + text
-        text = f"x:{x_cell:.2f} y:{y_cell:.2f} w:{w:.2f} h:{h:.2f} conf:{p:.2f}"
-        cv2.putText(frame, text, (10, 20),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1)
-        
-        if p > 0.5:
-            cv2.rectangle(frame, (x1,y1), (x2,y2), (0,255,0), 2)
-            
-        cv2.imshow("TinyYOLO Webcam", frame)
-        if cv2.waitKey(1) & 0xFF == 27:  # ESC to quit
-            break
+    # Draw bbox if p > 0.5
+    if p > 0.5:
+        cv2.rectangle(frame, (x1,y1), (x2,y2), (0,255,0), 2)
+    cv2.putText(frame, f"p:{p:.2f} x:{x:.2f} y:{y:.2f} w:{bw:.2f} h:{bh:.2f}",
+                (10,30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)   
+
+    # Show frame
+    cv2.imshow("Fist Detection", frame)
+
+    key = cv2.waitKey(1)
+    if key & 0xFF == ord('q'):
+        break
 
 cap.release()
 cv2.destroyAllWindows()

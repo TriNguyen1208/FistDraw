@@ -75,6 +75,8 @@ class ResNetFistDetector(nn.Module):
 
         # 2. Chạy qua head để ra 5 giá trị cuối
         out = self.head(features)
+
+        out[:, 1:5] = torch.relu(out[:, 1:5])
         return out
 
 
@@ -128,7 +130,7 @@ if __name__ == "__main__":
         print("Loaded model")
     except FileNotFoundError:
         print("No saved model found, training from scratch!")
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
     epochs = 10
     for epoch in range(epochs):
