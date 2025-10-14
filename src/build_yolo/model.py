@@ -63,20 +63,22 @@ import torchvision.models as models
 class ResNetFistDetector(nn.Module):
     def __init__(self, pretrained=True):
         super().__init__()
-        self.backbone = models.resnet34(weights=models.ResNet34_Weights.IMAGENET1K_V1 if pretrained else None)
+        self.backbone = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1 if pretrained else None)
 
         in_features = self.backbone.fc.in_features  #int
         self.backbone.fc = nn.Identity()            #last fc <-- NULL
-        self.head = nn.Linear(in_features, 5)       #Remake last fc
+        self.box_head = nn.Linear(in_features, 4)  
+        self.p_head = nn.Linear(in_features, 1) 
 
     def forward(self, x):
         # 1. Lấy feature vector từ backbone
         features = self.backbone(x)
 
         # 2. Chạy qua head để ra 5 giá trị cuối
-        out = self.head(features)
+        p = self.p_head(features)
+        box = self.box_head(features)
 
-        out[:, 1:5] = torch.relu(out[:, 1:5])
+        out = torch.cat([p, box], dim=1)  # (batch, 5) -> [p,x,y,w,h]
         return out
 
 
