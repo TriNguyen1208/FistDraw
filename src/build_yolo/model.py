@@ -55,44 +55,59 @@ class YOLOv1Tiny(nn.Module):
 
         out = torch.cat([p, xy, wh], dim=-1) # shape [...,5]
         return out
+#--------------
+import torch
+import torch.nn as nn
+import torchvision.models as models
+
+class ResNetFistDetector(nn.Module):
+    def __init__(self, pretrained=True):
+        super().__init__()
+        self.backbone = models.resnet34(weights=models.ResNet34_Weights.IMAGENET1K_V1 if pretrained else None)
+
+        in_features = self.backbone.fc.in_features  #int
+        self.backbone.fc = nn.Identity()            #last fc <-- NULL
+        self.head = nn.Linear(in_features, 5)       #Remake last fc
+
+    def forward(self, x):
+        # 1. Lấy feature vector từ backbone
+        features = self.backbone(x)
+
+        # 2. Chạy qua head để ra 5 giá trị cuối
+        out = self.head(features)
+        return out
+
+
+# --- Example usage ---
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model = ResNetFistDetector(pretrained=True).to(device)
 
 # Loss function
-class YOLOv1Loss(nn.Module):
-    def __init__(self, lambda_coord=5.0, lambda_obj=1.0, lambda_noobj=0.5):
+class DetectionLoss(nn.Module):
+    def __init__(self, lambda_box=5.0):
         super().__init__()
-        self.mse = nn.MSELoss(reduction="sum")
-        self.lambda_coord = lambda_coord
-        self.lambda_obj = lambda_obj
-        self.lambda_noobj = lambda_noobj
+        self.cls_loss = nn.BCEWithLogitsLoss()       # cho p
+        self.rgs_loss = nn.MSELoss()
+        self.lambda_box = lambda_box
 
-    def forward(self, preds, targets):
-        # preds, targets: [B, 7, 7, 5] -> (p, x, y, w, h)
-        obj_mask = targets[..., 0] > 0  # cell có object
-        noobj_mask = ~obj_mask
+    def forward(self, outputs, targets):
+        p_loss = self.cls_loss(outputs[:, 0], targets[:, 0])
+        x_loss = self.rgs_loss(outputs[:, 1], targets[:, 1])
+        y_loss = self.rgs_loss(outputs[:, 2], targets[:, 2])
 
-        # --- Cell có object ---
-        pred_obj = preds[obj_mask]
-        target_obj = targets[obj_mask]
+        w = torch.sqrt(torch.clamp(outputs[:,3], min=1e-6))
+        tw = torch.sqrt(torch.clamp(targets[:,3], min=1e-6))
+        w_loss = self.rgs_loss(w, tw)
 
-        loss_coord = (
-            self.mse(pred_obj[..., 1], target_obj[..., 1]) +
-            self.mse(pred_obj[..., 2], target_obj[..., 2]) +
-            self.mse(torch.sqrt(torch.clamp(pred_obj[..., 3], 1e-6, 1.0)),
-                     torch.sqrt(target_obj[..., 3])) +
-            self.mse(torch.sqrt(torch.clamp(pred_obj[..., 4], 1e-6, 1.0)),
-                     torch.sqrt(target_obj[..., 4]))
-        )
+        h = torch.sqrt(torch.clamp(outputs[:,4], min=1e-6))
+        th = torch.sqrt(torch.clamp(targets[:,4], min=1e-6))
+        h_loss = self.rgs_loss(w, tw)
 
-        loss_obj = self.mse(pred_obj[..., 0], target_obj[..., 0])
-        loss_noobj = self.mse(preds[noobj_mask][..., 0], targets[noobj_mask][..., 0])
+        box_loss = x_loss + y_loss + w_loss + h_loss
+        total_loss = p_loss + self.lambda_box * box_loss
 
-        total_loss = (
-            self.lambda_coord * loss_coord
-            + self.lambda_obj * loss_obj
-            + self.lambda_noobj * loss_noobj
-        )
+        print(p_loss.tolist(), " - ", box_loss.tolist(), " | ", total_loss.tolist()) 
         return total_loss
-
 
 #training
 device = "cuda"
@@ -106,8 +121,8 @@ valid_loader = dt.valid_loader2
 
 # Training loop
 if __name__ == "__main__":
-    model = YOLOv1Tiny().to(device)
-    criterion = YOLOv1Loss().to(device)
+    model = ResNetFistDetector().to(device)
+    criterion = DetectionLoss().to(device)
     try:
         model.load_state_dict(torch.load("src/build_yolo/tinyyolo_from_scratch.pth"))
         print("Loaded model")
@@ -115,7 +130,7 @@ if __name__ == "__main__":
         print("No saved model found, training from scratch!")
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
-    epochs = 15
+    epochs = 10
     for epoch in range(epochs):
         model.train()
         total_loss = 0
