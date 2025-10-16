@@ -62,12 +62,12 @@ class FistDataset(Dataset):
         h0,w0,_ = img.shape
 
         # augmentation
-        if self.augment:
-            if random.random()>0.5:
-                img = cv2.flip(img,1)  # horizontal flip
-            if random.random()>0.5:
-                alpha = random.uniform(0.8,1.2)  # brightness
-                img = cv2.convertScaleAbs(img, alpha=alpha, beta=0)
+        # if self.augment:
+        #     if random.random()>0.5:
+        #         img = cv2.flip(img,1)  # horizontal flip
+        #     if random.random()>0.5:
+        #         alpha = random.uniform(0.8,1.2)  # brightness
+        #         img = cv2.convertScaleAbs(img, alpha=alpha, beta=0)
 
         img = cv2.resize(img,(224,224))
         img = torch.from_numpy(img).permute(2,0,1).float()/255.0
