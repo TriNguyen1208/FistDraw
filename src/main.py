@@ -2,9 +2,13 @@ from ultralytics import YOLO
 import cv2
 import numpy as np
 import time 
+from src.draw_model.model.model import DrawModel
+from src.draw_model.config.constant import NUM_CLASSES
+import torch
 
 MATRIX_SIZE = 56
 TIMEOUT = 2
+TIME_SLEEP = 2
 
 # Nạp model YOLO đã train
 model = YOLO("src/fist_model/trained.pt")
@@ -31,6 +35,8 @@ draw_matrix = np.zeros((MATRIX_SIZE, MATRIX_SIZE), dtype=np.uint8)
 
 _, frame = cap.read()
 draw_frame = np.zeros_like(frame)
+draw_model = DrawModel(num_classes=NUM_CLASSES)
+
 while True:
     ret, frame = cap.read()
     frame = cv2.flip(frame, 1)  # 1 = lật ngang (mirror)
@@ -40,11 +46,11 @@ while True:
         break
 
     # Chạy YOLO detect realtime
-    results = model(frame, stream=True, imgsz=224) #take out the (x,y) here later
+    results = model(frame, stream=False, imgsz=224) #take out the (x,y) here later
 
     # Hiển thị kết quả
     display = None
-    r = next(iter(results))
+    r = results[0]
     boxes = r.boxes.xywh.cpu().numpy()
     if (len(boxes) > 0):
         box = boxes[0]   
@@ -78,7 +84,14 @@ while True:
         sub_frame = find_sub_frame(draw_matrix)
         sub_frame *= 255
         sub_frame = cv2.resize(sub_frame, (28, 28), interpolation=cv2.INTER_AREA)
-        cv2.imwrite("draw.png", sub_frame)
+        sub_frame = torch.from_numpy(sub_frame).float() / 255.0
+        sub_frame = sub_frame.reshape(1, -1, 28, 28)
+        y_pred = draw_model.predict(sub_frame)
+        text = f"Image name: {y_pred[0]}"
+        cv2.putText(display, text, (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+        cv2.imshow("YOLO Detection", display)
+        cv2.waitKey(TIME_SLEEP)  # chờ 3 giây để xem kết quả
         break
 
     # Nhấn 'q' để thoát

@@ -10,3 +10,7 @@
     - Create: python(or python3) -m venv .venv
     - Enter this line (for window): .venv\Scripts\activate
     - Enter this line (for linux): source .venv/bin/activate
+
+4. How to run with docker
+    - Enter at the first time: "docker build -t fist-draw(<image_name>)" .
+    - And then enter to run: "docker run fist-draw"

@@ -1,3 +1,4 @@
+src/draw_model/training/data
 *.npy
 *.pkl
 .venv

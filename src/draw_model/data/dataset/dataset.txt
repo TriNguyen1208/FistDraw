@@ -1,3 +1,0 @@
-apple.npy
-book.npy
-cloud.npy
