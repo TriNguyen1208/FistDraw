@@ -8,7 +8,7 @@ import torch
 
 MATRIX_SIZE = 56
 TIMEOUT = 2
-TIME_SLEEP = 2
+TIME_SLEEP = 5
 
 # Nạp model YOLO đã train
 model = YOLO("src/fist_model/trained.pt")
@@ -20,22 +20,53 @@ last_detect_time = time.time()
 # Hàm trích ra frame chứa ảnh vẽ từ frame webcam
 def find_sub_frame(draw_matrix):
     total_bits = np.sum(draw_matrix)
-    for cur_size in range(MATRIX_SIZE // 4, MATRIX_SIZE + 1, MATRIX_SIZE // 16):
-        for i in range(0, MATRIX_SIZE - cur_size + 1, MATRIX_SIZE // 16):
-            for j in range(0, MATRIX_SIZE - cur_size + 1, MATRIX_SIZE // 16):
-                sub_frame = draw_matrix[i : i+cur_size, j : j + cur_size]
-                cur_bits = np.sum(sub_frame)
-                if (total_bits == cur_bits):
-                    return sub_frame.copy()
+    H, W = draw_matrix.shape
+    a = min(H, W) 
+
+    for cur_size in range(max(28, a // 8), a + 1, a // 16):
+        for i in range(0, H - cur_size + 1, cur_size // 3):
+            for j in range(0, W - cur_size + 1, cur_size // 3):
+                cur_frame = draw_matrix[i:i+cur_size, j:j+cur_size]
+                cur_bits = np.sum(cur_frame)
+                if (cur_bits == total_bits):
+                    print("Found sub frame!!!!")
+                    
+                    #Move the object to the center
+                    step = cur_size // 5
+                    for _i in range(i, i + cur_size, step):
+                        cur_frame = draw_matrix[_i:_i+cur_size, j:j+cur_size]
+                        cur_bits = np.sum(cur_frame)
+                        if (cur_bits < total_bits):
+                            i = (i + _i - step) // 2
+                            break
+
+                    for _j in range(j, j + cur_size, step):
+                        cur_frame = draw_matrix[i:i+cur_size, _j:_j+cur_size]
+                        cur_bits = np.sum(cur_frame)
+                        if (cur_bits < total_bits):
+                            j = (j + _j - step) // 2
+                            break
+                    
+                    cur_frame = draw_matrix[i:i+cur_size, j:j+cur_size]
+                    cur_frame = cv2.resize(cur_frame, (28, 28), interpolation=cv2.INTER_AREA)
+
+                    #find the positive median
+                    contain = cur_frame > 0
+                    med = np.median(cur_frame[contain])
+                    cur_frame /= (med) # nearly normalize
+                    return cur_frame
+                
+    print("No sub frame found!")
+    return None    #actually, this would never happen
 
 # Bắt đầu webcam
 detected = False
 prev_x, prev_y = None, None
-draw_matrix = np.zeros((MATRIX_SIZE, MATRIX_SIZE), dtype=np.uint8)
 
 _, frame = cap.read()
-draw_frame = np.zeros_like(frame)
+draw_frame = np.zeros_like(frame) #for display on webcam
 draw_model = DrawModel(num_classes=NUM_CLASSES)
+draw_matrix = np.zeros(frame.shape[:2]) #for classification
 
 while True:
     ret, frame = cap.read()
@@ -65,14 +96,9 @@ while True:
 
         if prev_x is None and prev_y is None: 
             prev_x, prev_y = x, y
-            
-        draw_prev_x = int(prev_x * MATRIX_SIZE / w_frame)
-        draw_prev_y = int(prev_y * MATRIX_SIZE / h_frame)
-        draw_x = int(x * MATRIX_SIZE / w_frame)
-        draw_y = int(y * MATRIX_SIZE / h_frame)
 
         cv2.line(draw_frame, (prev_x, prev_y), (x, y), (0, 255, 0), 2)
-        cv2.line(draw_matrix, (draw_prev_x, draw_prev_y), (draw_x, draw_y), 1, 1)
+        cv2.line(draw_matrix, (prev_x, prev_y), (x, y), 255, 1)
         prev_x, prev_y = x, y
     
     annotated = r.plot()  # Bbox + label
@@ -83,11 +109,13 @@ while True:
         print("No detection for {TIMEOUT} seconds. Exiting...")
         sub_frame = find_sub_frame(draw_matrix)
         sub_frame *= 255
-        sub_frame = cv2.resize(sub_frame, (28, 28), interpolation=cv2.INTER_AREA)
+        cv2.imwrite("draw.png", sub_frame); print("Save picture successfully!")
+
         sub_frame = torch.from_numpy(sub_frame).float() / 255.0
         sub_frame = sub_frame.reshape(1, -1, 28, 28)
         y_pred = draw_model.predict(sub_frame)
         text = f"Image name: {y_pred[0]}"
+        print(text)
         cv2.putText(display, text, (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
         cv2.imshow("YOLO Detection", display)

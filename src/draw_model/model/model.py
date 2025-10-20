@@ -143,5 +143,6 @@ class DrawModel(nn.Module):
         with torch.no_grad():
             logits = self(input)
             preds = F.softmax(logits, dim=1)
-            values, indices = preds.max(dim=1)
+            values, indices = preds.max(dim=1) 
+            print(values[0].item(), " - ", CLASS_NAMES[indices[0].item()])
             return [CLASS_NAMES[idx.item()] if value.item() >= THRESHOLD_PROB else "UNKNOWN" for value, idx in zip(values, indices)]

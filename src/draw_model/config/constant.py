@@ -21,5 +21,5 @@ NUM_CLASSES = len(CLASS_NAMES)
 TRAIN_SPLIT = 0.8
 CHECKPOINT_PATH = os.path.join(BASE_DIR, 'training/model.pt')
 
-THRESHOLD_PROB = 0.5
+THRESHOLD_PROB = 0.45
 
