@@ -1,7 +1,7 @@
 apple
 banana
-cake
 book
+cake
 car
 cloud
 cup
@@ -18,7 +18,7 @@ hamburger
 headphones
 house
 ice cream
-Knife
+knife
 leaf
 pants
 pencil
@@ -27,4 +27,4 @@ spoon
 star
 sword
 t-shirt
-umbrella 
+umbrella
